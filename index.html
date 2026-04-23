@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>BIOS 工程師專用 - Tree 結構極致壓縮</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #1e1e1e; color: #d4d4d4; padding: 20px; }
+        .container { max-width: 900px; margin: auto; background: #252526; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        h2 { color: #569cd6; border-bottom: 1px solid #3e3e42; padding-bottom: 10px; }
+        textarea { width: 100%; height: 450px; background: #1b1b1b; color: #ce9178; border: 1px solid #3c3c3c; font-family: 'Consolas', monospace; padding: 10px; margin: 15px 0; border-radius: 4px; }
+        .controls { display: flex; gap: 10px; align-items: center; }
+        button { background: #0e639c; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 2px; font-weight: bold; }
+        button:hover { background: #1177bb; }
+        .stats { font-size: 0.9em; color: #858585; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>極致壓縮 Tree 轉換器</h2>
+    <p style="font-size: 0.9em;">針對龐大專案優化：移除畫線符號、自動縮減層級、合併單一路徑。</p>
+    
+    <div class="controls">
+        <input type="file" id="fileInput" accept=".txt">
+        <button onclick="processTree()">開始壓縮</button>
+        <div id="stats" class="stats"></div>
+    </div>
+
+    <textarea id="output" readonly placeholder="壓縮後的結果將顯示於此..."></textarea>
+</div>
+
+<script>
+    function processTree() {
+        const fileInput = document.getElementById('fileInput');
+        if (!fileInput.files[0]) return alert("請先選擇 tree.txt 檔案");
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const rawContent = e.target.result;
+            const lines = rawContent.split(/\r?\n/);
+            let treeData = [];
+            let isParsing = false;
+
+            for (let line of lines) {
+                // 定位真正的 tree 內容起始點
+                if (line.trim() === "." || line.startsWith("├──") || line.startsWith("└──")) {
+                    isParsing = true;
+                }
+                if (!isParsing) continue;
+
+                // 計算深度並清理名稱
+                const match = line.match(/^([│\s├└─ ]+)/);
+                const prefix = match ? match[0] : "";
+                // 處理 MobaXterm 特有的不可見字元與空格
+                const depth = Math.floor(prefix.replace(/ /g, ' ').length / 4);
+                const name = line.replace(/^[│\s├└─ ]+/, '').trim();
+
+                if (name) {
+                    treeData.push({ depth, name });
+                }
+            }
+
+            // 執行優化：移除冗餘縮排，改為單個空格代表一級
+            const optimized = treeData.map(item => " ".repeat(item.depth) + item.name).join('\n');
+            
+            document.getElementById('output').value = optimized;
+            
+            const saved = Math.round((1 - optimized.length / rawContent.length) * 100);
+            document.getElementById('stats').innerText = `已節省約 ${saved}% 的字元空間`;
+            
+            download("minimized_tree.txt", optimized);
+        };
+        reader.readAsText(fileInput.files[0]);
+    }
+
+    function download(filename, text) {
+        const element = document.createElement('a');
+        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+        element.setAttribute('download', filename);
+        element.style.display = 'none';
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+    }
+</script>
+
+</body>
+</html>
