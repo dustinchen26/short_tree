@@ -2,72 +2,192 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>BIOS 工程師專用 - Tree 結構極致壓縮</title>
+    <title>BIOS Tree 結構極致壓縮工具 v3.0</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #1e1e1e; color: #d4d4d4; padding: 20px; }
-        .container { max-width: 900px; margin: auto; background: #252526; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        h2 { color: #569cd6; border-bottom: 1px solid #3e3e42; padding-bottom: 10px; }
-        textarea { width: 100%; height: 450px; background: #1b1b1b; color: #ce9178; border: 1px solid #3c3c3c; font-family: 'Consolas', monospace; padding: 10px; margin: 15px 0; border-radius: 4px; }
-        .controls { display: flex; gap: 10px; align-items: center; }
-        button { background: #0e639c; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 2px; font-weight: bold; }
-        button:hover { background: #1177bb; }
-        .stats { font-size: 0.9em; color: #858585; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; 
+            background-color: #f4f7f9; 
+            color: #333; 
+            padding: 40px 20px;
+            line-height: 1.6;
+        }
+        .container { 
+            max-width: 1100px; 
+            margin: auto; 
+            background: white; 
+            padding: 35px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
+            border: 1px solid #e1e4e8;
+        }
+        h2 { 
+            color: #0056b3; 
+            margin-top: 0;
+            border-bottom: 2px solid #f0f2f5;
+            padding-bottom: 15px;
+        }
+        .description {
+            font-size: 14px;
+            color: #666;
+            background: #eef6ff;
+            padding: 12px;
+            border-left: 4px solid #007bff;
+            margin-bottom: 25px;
+        }
+        .stats-panel {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
+        .stat-label { font-size: 12px; color: #6c757d; display: block; }
+        .stat-value { font-size: 20px; font-weight: bold; color: #333; }
+        .stat-value.green { color: #28a745; }
+
+        textarea { 
+            width: 100%; 
+            height: 450px; 
+            background: #ffffff; 
+            color: #212529; 
+            border: 1px solid #ced4da; 
+            font-family: 'Consolas', 'Monaco', monospace; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 6px; 
+            box-sizing: border-box;
+            font-size: 13px;
+        }
+        .controls { 
+            display: flex; 
+            gap: 15px; 
+            align-items: center; 
+            margin-bottom: 10px;
+        }
+        input[type="file"] { font-size: 14px; }
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 12px 28px; 
+            cursor: pointer; 
+            border-radius: 6px; 
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        button:hover { background: #0056b3; box-shadow: 0 2px 6px rgba(0,123,255,0.3); }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>極致壓縮 Tree 轉換器</h2>
-    <p style="font-size: 0.9em;">針對龐大專案優化：移除畫線符號、自動縮減層級、合併單一路徑。</p>
+    <h2>BIOS Tree 結構極致壓縮工具</h2>
+    <p class="description">
+        此工具專為 BIOS Release Code 巨大的目錄樹設計。會自動精準過濾 MobaXterm 歡迎文字與命令列雜訊，
+        僅保留從「.」根目錄開始的檔案結構，並以 1 空格 = 1 層級進行壓縮。
+    </p>
     
-    <div class="controls">
-        <input type="file" id="fileInput" accept=".txt">
-        <button onclick="processTree()">開始壓縮</button>
-        <div id="stats" class="stats"></div>
+    <div class="stats-panel">
+        <div class="stat-card">
+            <span class="stat-label">原始總字數</span>
+            <span id="origChar" class="stat-value">0</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">處理後總字數</span>
+            <span id="newChar" class="stat-value">0</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">字元節省率</span>
+            <span id="saveRate" class="stat-value green">0%</span>
+        </div>
     </div>
 
-    <textarea id="output" readonly placeholder="壓縮後的結果將顯示於此..."></textarea>
+    <div class="controls">
+        <input type="file" id="fileInput" accept=".txt">
+        <button onclick="processTree()">轉換、檢查並下載</button>
+    </div>
+
+    <textarea id="output" readonly placeholder="轉換後的結構將顯示於此..."></textarea>
 </div>
 
 <script>
     function processTree() {
         const fileInput = document.getElementById('fileInput');
-        if (!fileInput.files[0]) return alert("請先選擇 tree.txt 檔案");
+        const outputArea = document.getElementById('output');
+        
+        if (!fileInput.files[0]) {
+            alert("請選擇檔案！");
+            return;
+        }
 
         const reader = new FileReader();
         reader.onload = function(e) {
             const rawContent = e.target.result;
             const lines = rawContent.split(/\r?\n/);
-            let treeData = [];
+            const treeData = [];
             let isParsing = false;
 
             for (let line of lines) {
-                // 定位真正的 tree 內容起始點
-                if (line.trim() === "." || line.startsWith("├──") || line.startsWith("└──")) {
-                    isParsing = true;
-                }
-                if (!isParsing) continue;
+                const trimmed = line.trim();
 
-                // 計算深度並清理名稱
+                // 1. 起始條件：精準定位到單獨的 "." 或目錄根路徑
+                if (!isParsing) {
+                    if (trimmed === "." || (trimmed.startsWith("/") && trimmed.includes("tree"))) {
+                        isParsing = true;
+                    }
+                    if (!isParsing) continue;
+                }
+
+                // 2. 雜訊過濾：排除 MobaXterm 字元、路徑提示字元及統計資訊
+                if (trimmed.includes("MobaXterm") || 
+                    trimmed.includes("Edition") || 
+                    trimmed.includes("http") ||
+                    trimmed.includes("") || // 排除 MobaXterm 的 Powerline 提示符號
+                    trimmed.includes("┌──") || 
+                    trimmed.includes("└──")) {
+                    continue;
+                }
+
+                // 排除最後一行的統計資訊
+                if (trimmed.includes("directories") && trimmed.includes("files")) continue;
+
+                // 3. 解析深度與純名稱
                 const match = line.match(/^([│\s├└─ ]+)/);
                 const prefix = match ? match[0] : "";
-                // 處理 MobaXterm 特有的不可見字元與空格
-                const depth = Math.floor(prefix.replace(/ /g, ' ').length / 4);
+                // 處理特殊寬空格與標準空格，並計算層級 (4字元寬度為一級)
+                const normalizedPrefix = prefix.replace(/ /g, ' '); 
+                const depth = Math.floor(normalizedPrefix.length / 4);
+                
                 const name = line.replace(/^[│\s├└─ ]+/, '').trim();
 
-                if (name) {
-                    treeData.push({ depth, name });
+                if (name && isParsing) {
+                    // 二次防禦：過濾掉殘留的空框線或路徑提示行
+                    if (!name.includes("") && !name.includes("──┘")) {
+                        treeData.push({ depth, name });
+                    }
                 }
             }
 
-            // 執行優化：移除冗餘縮排，改為單個空格代表一級
+            // 4. 生成結果
             const optimized = treeData.map(item => " ".repeat(item.depth) + item.name).join('\n');
+            outputArea.value = optimized;
             
-            document.getElementById('output').value = optimized;
+            // 5. 統計更新
+            const origCount = rawContent.length;
+            const newCount = optimized.length;
+            const savedPercent = Math.round((1 - newCount / origCount) * 100);
+
+            document.getElementById('origChar').innerText = origCount.toLocaleString();
+            document.getElementById('newChar').innerText = newCount.toLocaleString();
+            document.getElementById('saveRate').innerText = savedPercent + "%";
             
-            const saved = Math.round((1 - optimized.length / rawContent.length) * 100);
-            document.getElementById('stats').innerText = `已節省約 ${saved}% 的字元空間`;
-            
+            // 自動下載
             download("minimized_tree.txt", optimized);
         };
         reader.readAsText(fileInput.files[0]);
