@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>BIOS Tree 結構極致壓縮工具 v3.0</title>
+    <title>BIOS Tree 結構極致壓縮工具 v3.1</title>
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; 
@@ -91,6 +91,7 @@
     <p class="description">
         此工具專為 BIOS Release Code 巨大的目錄樹設計。會自動精準過濾 MobaXterm 歡迎文字與命令列雜訊，
         僅保留從「.」根目錄開始的檔案結構，並以 1 空格 = 1 層級進行壓縮。
+        （v3.1 修正：不再誤刪以「└──」開頭的檔案條目）
     </p>
     
     <div class="stats-panel">
@@ -145,12 +146,11 @@
                 }
 
                 // 2. 雜訊過濾：排除 MobaXterm 字元、路徑提示字元及統計資訊
+                // 注意：不再排除 └── 或 ┌──，避免刪除正式檔案條目
                 if (trimmed.includes("MobaXterm") || 
                     trimmed.includes("Edition") || 
                     trimmed.includes("http") ||
-                    trimmed.includes("") || // 排除 MobaXterm 的 Powerline 提示符號
-                    trimmed.includes("┌──") || 
-                    trimmed.includes("└──")) {
+                    trimmed.includes("")) {
                     continue;
                 }
 
